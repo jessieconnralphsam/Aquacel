@@ -59,7 +59,7 @@ void loop() {
 
   sim800.println("AT+CMGF=1");
   delay(1000);
-  sim800.println("AT+CMGS=\"+639934387196\"");
+  sim800.println("AT+CMGS=\"sample number here\"");
   delay(1000);
   sim800.print(message);
   delay(1000);

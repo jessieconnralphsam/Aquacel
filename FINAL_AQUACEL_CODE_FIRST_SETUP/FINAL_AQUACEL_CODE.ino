@@ -4,17 +4,19 @@
 #include <DallasTemperature.h>
 #include <ThreeWire.h>
 #include <RtcDS1302.h>
+#include <Wire.h>
 
 #define SIM800_TX_PIN 10
 #define SIM800_RX_PIN 11
 #define SENSOR_PIN 7
 #define DO_PIN A14
+#define PH_SENSOR_PIN A8
 
 SoftwareSerial sim800(SIM800_TX_PIN, SIM800_RX_PIN);
 OneWire oneWire(SENSOR_PIN);
 DallasTemperature tempSensor(&oneWire);
 
-ThreeWire myWire(4,5,2);
+ThreeWire myWire(4, 5, 2);
 RtcDS1302<ThreeWire> Rtc(myWire);
 
 #define VREF 5000    //VREF (mv)
@@ -43,11 +45,17 @@ uint16_t ADC_Raw;
 uint16_t ADC_Voltage;
 uint16_t DO;
 
+float calibration_value = 21.34 - 0.7;
+unsigned long int avgval;
+int buffer_arr[10], temp;
+float ph_act;
+
 void setup() {
   Serial.begin(9600);
   sim800.begin(9600);
   tempSensor.begin();
   Rtc.Begin();
+  Wire.begin();
 
   Serial.println("Sending data...");
 }
@@ -90,8 +98,11 @@ void loop() {
   Serial.print("Turbidity (NTU): ");
   Serial.println(turbidity);
 
+  // Measure pH
+  measurePH();
+
   // Send data via SMS
-  String message = "TEMPERATURE: " + String(tempCelsius) + " Degrees Celsius, DISSOLVED OXYGEN: " + String(DO) + " mg/L, TURBIDITY: " + String(turbidity) + " NTU";
+  String message = "TEMPERATURE: " + String(tempCelsius) + " Degrees Celsius, DISSOLVED OXYGEN: " + String(DO) + " mg/L, TURBIDITY: " + String(turbidity) + " NTU, pH: " + String(ph_act);
 
   sim800.println("AT+CMGF=1");
   delay(1000);
@@ -125,6 +136,32 @@ float mapVoltageToTurbidity(float voltage) {
   float b = 5.0;
   float turbidity = m * voltage + b;
   return turbidity;
+}
+
+void measurePH() {
+  for (int i = 0; i < 10; i++) {
+    buffer_arr[i] = analogRead(PH_SENSOR_PIN);
+    delay(30);
+  }
+
+  for (int i = 0; i < 9; i++) {
+    for (int j = i + 1; j < 10; j++) {
+      if (buffer_arr[i] > buffer_arr[j]) {
+        temp = buffer_arr[i];
+        buffer_arr[i] = buffer_arr[j];
+        buffer_arr[j] = temp;
+      }
+    }
+  }
+
+  avgval = 0;
+  for (int i = 2; i < 8; i++)
+    avgval += buffer_arr[i];
+  float volt = (float)avgval * 5.0 / 1024 / 6;
+  ph_act = -5.70 * volt + calibration_value;
+
+  Serial.print("pH Value: ");
+  Serial.println(ph_act);
 }
 
 void printDateTime(const RtcDateTime& dt) {

@@ -106,7 +106,7 @@ void loop() {
 
   sim800.println("AT+CMGF=1");
   delay(1000);
-  sim800.println("AT+CMGS=\"+639539365860\"");
+  sim800.println("AT+CMGS=\"+639539365860\""); //ga dawat text
   delay(1000);
   sim800.print(message);
   delay(1000);

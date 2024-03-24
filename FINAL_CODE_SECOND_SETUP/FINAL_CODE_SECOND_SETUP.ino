@@ -6,13 +6,13 @@
 #include <RtcDS1302.h>
 #include <Wire.h>
 
-#define SIM800_TX_PIN 10
-#define SIM800_RX_PIN 11
+// #define SIM800_TX_PIN 10
+// #define SIM800_RX_PIN 11
 #define SENSOR_PIN 7
 #define DO_PIN A14
 #define PH_SENSOR_PIN A8
 
-SoftwareSerial sim800(SIM800_TX_PIN, SIM800_RX_PIN);
+SoftwareSerial gsmSerial(10, 11);
 OneWire oneWire(SENSOR_PIN);
 DallasTemperature tempSensor(&oneWire);
 
@@ -61,12 +61,12 @@ void setup() {
 }
 
 void loop() {
-  // Get and display current time
+  String phoneNumbers[] = {"+639667398225", "+639539786598", "+639857951346"};
+
   RtcDateTime now = Rtc.GetDateTime();
   printDateTime(now);
   Serial.println();
 
-  // Get and display temperature
   tempSensor.requestTemperatures();
   tempCelsius = tempSensor.getTempCByIndex(0);
   tempFahrenheit = tempCelsius * 9 / 5 + 32;
@@ -78,47 +78,32 @@ void loop() {
   Serial.print(tempFahrenheit);
   Serial.println("°F");
 
-  // Read dissolved oxygen (DO)
   Temperaturet = (uint8_t)READ_TEMP;
   ADC_Raw = analogRead(DO_PIN);
   ADC_Voltage = (uint32_t)VREF * ADC_Raw / ADC_RES;
   DO = readDO(ADC_Voltage, Temperaturet) / 1000.0;
 
-  // Print DO
   Serial.print("Dissolved Oxygen: ");
   Serial.print(DO);
   Serial.println(" mg/L");
 
-  // Measure turbidity
   int sensorValue = analogRead(A0);
   float voltage = sensorValue * (5.0 / 1024.0);
   float turbidity = mapVoltageToTurbidity(voltage);
 
-  // Print turbidity
   Serial.print("Turbidity (NTU): ");
   Serial.println(turbidity);
 
-  // Measure pH
   measurePH();
 
-  // Send data via SMS
-  String message = "TEMPERATURE: " + String(tempCelsius) + " Degrees Celsius, DISSOLVED OXYGEN: " + String(DO) + " mg/L, TURBIDITY: " + String(turbidity) + " NTU, pH: " + String(ph_act);
+  String message = "TEMPERATURE: " + String(tempCelsius) + " Degrees Celsius "+ "\n" + "DISSOLVED OXYGEN: " + String(DO) + " mg/L" + "\n" + "TURBIDITY: " + String(turbidity) + " NTU" +"\n"+ "pH: " + String(ph_act);
 
-  sim800.println("AT+CMGF=1");
-  delay(1000);
-  sim800.println("AT+CMGS=\"+639539365860\"");
-  delay(1000);
-  sim800.print(message);
-  delay(1000);
-  sim800.write(26);
-  delay(1000);
-  if (sim800.find("OK")) {
-    Serial.println("Message sent successfully!");
-  } else {
-    Serial.println("Failed to send message.");
-  }
-
-  delay(5000);
+  sendSMS("+639667398225", message);
+  delay(3000);
+  sendSMS("+639955575982", message);
+  delay(3000);
+  sendSMS("+639857951346", message);
+  delay(1000*60*5);
 }
 
 int16_t readDO(uint32_t voltage_mv, uint8_t temperature_c) {
@@ -193,4 +178,32 @@ void printDateTime(const RtcDateTime& dt) {
              dt.Second(),
              is_pm ? "PM" : "AM");
   Serial.print(datestring);
+}
+
+void sendSMS(String phoneNumber, String message) {
+  gsmSerial.println("AT+CMGF=1");
+
+  delay(1000);
+
+
+  gsmSerial.print("AT+CMGS=\"");
+  gsmSerial.print(phoneNumber);
+  gsmSerial.println("\"");
+
+  delay(1000);
+
+
+  gsmSerial.print(message);
+
+  delay(1000);
+
+
+  gsmSerial.println((char)26);
+
+  delay(1000);
+
+
+  while (gsmSerial.available()) {
+    Serial.write(gsmSerial.read());
+  }
 }

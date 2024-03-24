@@ -185,29 +185,28 @@ void printDateTime(const RtcDateTime& dt) {
 }
 
 void sendSMS(String phoneNumber, String message) {
-  // AT command to set SIM900 to SMS mode
   gsmSerial.println("AT+CMGF=1");
 
   delay(1000);
 
-  // Replace "phoneNumber" with the recipient's mobile phone number
+
   gsmSerial.print("AT+CMGS=\"");
   gsmSerial.print(phoneNumber);
   gsmSerial.println("\"");
 
   delay(1000);
 
-  // The SMS text
+
   gsmSerial.print(message);
 
   delay(1000);
 
-  // End AT command with a Ctrl-Z, ASCII code 26
+
   gsmSerial.println((char)26);
 
   delay(1000);
 
-  // Expecting OK response
+
   while (gsmSerial.available()) {
     Serial.write(gsmSerial.read());
   }

@@ -6,13 +6,15 @@
 #include <RtcDS1302.h>
 #include <Wire.h>
 
-// #define SIM800_TX_PIN 10
-// #define SIM800_RX_PIN 11
 #define SENSOR_PIN 7
 #define DO_PIN A14
 #define PH_SENSOR_PIN A8
 
-SoftwareSerial gsmSerial(10, 11);
+// #define GSM_TX_PIN 11
+// #define GSM_RX_PIN 10
+// SoftwareSerial sim800(GSM_TX_PIN, GSM_RX_PIN);
+SoftwareSerial gsmSerial(8, 9);
+
 OneWire oneWire(SENSOR_PIN);
 DallasTemperature tempSensor(&oneWire);
 
@@ -52,12 +54,11 @@ float ph_act;
 
 void setup() {
   Serial.begin(9600);
-  sim800.begin(9600);
+  gsmSerial.begin(9600);
+  delay(3000);
   tempSensor.begin();
   Rtc.Begin();
   Wire.begin();
-
-  Serial.println("Sending data...");
 }
 
 void loop() {
@@ -103,8 +104,9 @@ void loop() {
   sendSMS("+639955575982", message);
   delay(3000);
   sendSMS("+639857951346", message);
-  delay(1000*60*5);
+  delay(30000);
 }
+
 
 int16_t readDO(uint32_t voltage_mv, uint8_t temperature_c) {
 #if TWO_POINT_CALIBRATION == 0
@@ -181,6 +183,7 @@ void printDateTime(const RtcDateTime& dt) {
 }
 
 void sendSMS(String phoneNumber, String message) {
+  Serial.print("Sending data...");
   gsmSerial.println("AT+CMGF=1");
 
   delay(1000);

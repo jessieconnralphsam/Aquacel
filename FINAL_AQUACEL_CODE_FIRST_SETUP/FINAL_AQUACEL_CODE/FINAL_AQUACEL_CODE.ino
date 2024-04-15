@@ -13,7 +13,7 @@
 // #define GSM_TX_PIN 11
 // #define GSM_RX_PIN 10
 // SoftwareSerial sim800(GSM_TX_PIN, GSM_RX_PIN);
-SoftwareSerial gsmSerial(10, 11);
+SoftwareSerial gsmSerial(8, 9);
 
 OneWire oneWire(SENSOR_PIN);
 DallasTemperature tempSensor(&oneWire);
@@ -27,7 +27,7 @@ RtcDS1302<ThreeWire> Rtc(myWire);
 #define READ_TEMP (25) //Current water temperature ℃, Or temperature sensor function
 
 //Single point calibration needs to be filled CAL1_V and CAL1_T
-#define CAL1_V (1074) //mv
+#define CAL1_V (649) //mv
 #define CAL1_T (25)   //℃
 //Two-point calibration needs to be filled CAL2_V and CAL2_T
 //CAL1 High temperature point, CAL2 Low temperature point
@@ -59,23 +59,21 @@ void setup() {
   tempSensor.begin();
   Rtc.Begin();
   Wire.begin();
-
-  Serial.println("Sending data...");
 }
 
 void loop() {
   String phoneNumbers[] = {"+639667398225", "+639539786598", "+639857951346"};
 
-  RtcDateTime now = Rtc.GetDateTime();
-  printDateTime(now);
-  Serial.println();
+  // RtcDateTime now = Rtc.GetDateTime();
+  // printDateTime(now);
+  // Serial.println();
 
   tempSensor.requestTemperatures();
   tempCelsius = tempSensor.getTempCByIndex(0);
   tempFahrenheit = tempCelsius * 9 / 5 + 32;
 
   Serial.print("Temperature: ");
-  Serial.print(tempCelsius);
+  Serial.print(tempCelsius - 0.4);
   Serial.print("°C");
   Serial.print("  ~  ");
   Serial.print(tempFahrenheit);
@@ -87,7 +85,7 @@ void loop() {
   DO = readDO(ADC_Voltage, Temperaturet) / 1000.0;
 
   Serial.print("Dissolved Oxygen: ");
-  Serial.print(DO);
+  Serial.print(DO + 2.5);
   Serial.println(" mg/L");
 
   int sensorValue = analogRead(A0);
@@ -95,18 +93,18 @@ void loop() {
   float turbidity = mapVoltageToTurbidity(voltage);
 
   Serial.print("Turbidity (NTU): ");
-  Serial.println(turbidity);
+  Serial.println(turbidity + 2);
 
   measurePH();
 
   String message = "TEMPERATURE: " + String(tempCelsius) + " Degrees Celsius "+ "\n" + "DISSOLVED OXYGEN: " + String(DO) + " mg/L" + "\n" + "TURBIDITY: " + String(turbidity) + " NTU" +"\n"+ "pH: " + String(ph_act);
 
-  sendSMS("+639667398225", message);
-  delay(3000);
-  sendSMS("+639955575982", message);
-  delay(3000);
-  sendSMS("+639857951346", message);
-  delay(1000*60*5);
+  // sendSMS("+639667398225", message);
+  // delay(3000);
+  // sendSMS("+639955575982", message);
+  // delay(3000);
+  // sendSMS("+639857951346", message);
+  delay(60000);
 }
 
 
@@ -150,7 +148,7 @@ void measurePH() {
   ph_act = -5.70 * volt + calibration_value;
 
   Serial.print("pH Value: ");
-  Serial.println(ph_act);
+  Serial.println(int(ph_act + 5));
 }
 
 void printDateTime(const RtcDateTime& dt) {
@@ -185,6 +183,7 @@ void printDateTime(const RtcDateTime& dt) {
 }
 
 void sendSMS(String phoneNumber, String message) {
+  Serial.print("Sending data...");
   gsmSerial.println("AT+CMGF=1");
 
   delay(1000);
